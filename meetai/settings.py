@@ -111,9 +111,9 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
-    'https://meet-with-me.fly.dev/',
+    'https://meet-with-me.fly.dev',
     "http://localhost:5173",
-    "https://meet-with-me-ui.fly.dev/",
+    "https://meet-with-me-ui.fly.dev",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
@@ -163,4 +163,3 @@ GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:42
 MICROSOFT_CLIENT_ID = os.environ.get("MICROSOFT_CLIENT_ID", "")
 MICROSOFT_CLIENT_SECRET = os.environ.get("MICROSOFT_CLIENT_SECRET", "")
 MICROSOFT_REDIRECT_URI = os.environ.get("MICROSOFT_REDIRECT_URI", "http://localhost:4200/integrations/microsoft/callback")
-
