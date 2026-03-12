@@ -1,21 +1,30 @@
-FROM python:3.11-slim
+ARG PYTHON_VERSION=3.11-slim
 
-WORKDIR /app
+FROM python:${PYTHON_VERSION}
 
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install psycopg2 dependencies.
 RUN apt-get update && apt-get install -y \
-    gcc \
     libpq-dev \
-    ffmpeg \
-    curl \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN mkdir -p /code
 
-COPY . .
+WORKDIR /code
 
-RUN mkdir -p /app/media/recordings /app/staticfiles
+COPY requirements.txt /tmp/requirements.txt
+RUN set -ex && \
+    pip install --upgrade pip && \
+    pip install -r /tmp/requirements.txt && \
+    rm -rf /root/.cache/
+COPY . /code
+
+ENV SECRET_KEY "8F7VH5gpuQafZK1GRFRrIQVGJ4Be9Cbz7XRt8PyJZ6T5Elx0OD"
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["gunicorn", "meetai.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn","--bind",":8000","--workers","2","meetai.wsgi"]
