@@ -9,8 +9,8 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             "id", "meeting", "meeting_title", "title", "description",
-            "assigned_to", "due_date", "status", "created_at", "updated_at",
-            "facility",
+            "assigned_to", "due_date", "estimated_minutes", "status",
+            "created_at", "updated_at", "facility",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "meeting_title"]
 
@@ -21,7 +21,7 @@ class TaskSerializer(serializers.ModelSerializer):
 class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ["meeting", "title", "description", "assigned_to", "due_date", "status", "facility"]
+        fields = ["meeting", "title", "description", "assigned_to", "due_date", "estimated_minutes", "status", "facility"]
 
     def validate_facility(self, value):
         request = self.context.get("request")

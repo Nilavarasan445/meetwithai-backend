@@ -1,0 +1,1 @@
+web: gunicorn meetai-backend.wsgi:application

@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.tasks",
     "apps.facilities",
     "apps.integrations",
+    "apps.standup",
 ]
 
 MIDDLEWARE = [
@@ -124,6 +125,9 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+CELERY_TASK_ALWAYS_EAGER = False          # Never run tasks inline — always go through Redis
+CELERY_TASK_EAGER_PROPAGATES = False
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True  # Suppress deprecation warning in Celery 6
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
@@ -163,3 +167,8 @@ GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:42
 MICROSOFT_CLIENT_ID = os.environ.get("MICROSOFT_CLIENT_ID", "")
 MICROSOFT_CLIENT_SECRET = os.environ.get("MICROSOFT_CLIENT_SECRET", "")
 MICROSOFT_REDIRECT_URI = os.environ.get("MICROSOFT_REDIRECT_URI", "http://localhost:4200/integrations/microsoft/callback")
+
+# ─── GitHub OAuth ─────────────────────────────────────────────────────────────
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
+GITHUB_REDIRECT_URI = os.environ.get("GITHUB_REDIRECT_URI", "http://localhost:4200/standup/github/callback")

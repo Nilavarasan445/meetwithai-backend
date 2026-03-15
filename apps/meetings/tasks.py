@@ -6,7 +6,13 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+@shared_task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=30,
+    time_limit=600,
+    soft_time_limit=540,
+)
 def process_meeting(self, meeting_id):
     """
     Main pipeline: transcribe audio → AI analysis → extract tasks.
@@ -25,18 +31,18 @@ def process_meeting(self, meeting_id):
         meeting.status = Meeting.STATUS_TRANSCRIBING
         meeting.save(update_fields=["status"])
 
-        transcript_text = transcribe_audio(meeting)
+        transcript = transcribe_audio(meeting)
 
         transcript, _ = Transcript.objects.update_or_create(
             meeting=meeting,
-            defaults={"text": transcript_text},
+            defaults={"text": transcript.text},
         )
 
         # Step 2: AI Analysis
         meeting.status = Meeting.STATUS_ANALYZING
         meeting.save(update_fields=["status"])
 
-        analysis = analyze_transcript(transcript_text, meeting.title)
+        analysis = analyze_transcript(transcript.text, meeting.title)
 
         # Save summary
         MeetingSummary.objects.update_or_create(
@@ -85,30 +91,26 @@ def process_meeting(self, meeting_id):
 
 
 def transcribe_audio(meeting):
-    """
-    Transcribe audio using OpenAI Whisper API.
-    Falls back to mock transcript if no API key configured.
-    """
     api_key = settings.OPENAI_API_KEY
-    if not api_key or api_key.startswith("sk-your"):
+
+    if not api_key:
         logger.info("No API key found")
         return _mock_transcript(meeting.title)
 
     try:
         from openai import OpenAI
-        logger.info("OpenAI client initialized successfully=============")
-        logger.info(f"API KEY VALUE: {api_key}")
         client = OpenAI(api_key=api_key)
-        logger.info("======================")
 
-        with meeting.recording_file.open("rb") as audio_file:
+        audio_path = meeting.recording_file.path
+
+        with open(audio_path, "rb") as audio_file:
             response = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=("audio.wav", audio_file.read()),
-                response_format="text",
+                file=audio_file
             )
-            logger.info("Transcription response received", response)
+
         return response
+
     except Exception as e:
         logger.warning(f"Whisper transcription failed: {e}. Using mock.")
         return _mock_transcript(meeting.title)
@@ -150,7 +152,12 @@ Transcript:
             response_format={"type": "json_object"},
         )
 
-        return json.loads(response.choices[0].message.content)
+        content = response.choices[0].message.content
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON from GPT. Falling back to mock.")
+            return _mock_analysis(meeting_title)
     except Exception as e:
         logger.warning(f"GPT analysis failed: {e}. Using mock.")
         return _mock_analysis(meeting_title)

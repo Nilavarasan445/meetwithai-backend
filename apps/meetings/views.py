@@ -45,6 +45,13 @@ class MeetingListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied(
                 "Free plan limit reached (5 meetings/month). Upgrade to Pro."
             )
+        # If no facility provided, assign to user's first facility
+        data = serializer.validated_data
+        if not data.get('facility'):
+            from apps.facilities.models import Facility
+            first_facility = Facility.objects.filter(owner=user).first()
+            if first_facility:
+                data['facility'] = first_facility
         meeting = serializer.save(user=user, status=Meeting.STATUS_PENDING)
         # Trigger background processing
         process_meeting.delay(meeting.id)

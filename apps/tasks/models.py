@@ -35,6 +35,7 @@ class Task(models.Model):
     description = models.TextField(blank=True)
     assigned_to = models.CharField(max_length=100, blank=True)
     due_date = models.DateField(null=True, blank=True)
+    estimated_minutes = models.PositiveIntegerField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TODO)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

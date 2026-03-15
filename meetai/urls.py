@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/tasks/", include("apps.tasks.urls")),
     path("api/facilities/", include("apps.facilities.urls")),
     path("api/integrations/", include("apps.integrations.urls")),
+    path("api/standup/", include("apps.standup.urls")),
 ]
 
 if settings.DEBUG:

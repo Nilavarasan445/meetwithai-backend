@@ -26,7 +26,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    github_access_token = models.TextField(null=True, blank=True)
+    github_username = models.CharField(max_length=200, null=True, blank=True)
+    
     # Subscription
     PLAN_FREE = "free"
     PLAN_PRO = "pro"
@@ -52,6 +54,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.first_name} {self.last_name}".strip() or self.email
 
     def can_upload_meeting(self):
-        if self.plan == self.PLAN_FREE and self.meetings_this_month >= 5:
+        if self.plan == self.PLAN_FREE and self.meetings_this_month >= 10:
             return False
         return True
