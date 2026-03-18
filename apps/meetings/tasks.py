@@ -31,18 +31,18 @@ def process_meeting(self, meeting_id):
         meeting.status = Meeting.STATUS_TRANSCRIBING
         meeting.save(update_fields=["status"])
 
-        transcript = transcribe_audio(meeting)
+        transcript_text = transcribe_audio(meeting)
 
         transcript, _ = Transcript.objects.update_or_create(
             meeting=meeting,
-            defaults={"text": transcript.text},
+            defaults={"text": transcript_text},
         )
 
         # Step 2: AI Analysis
         meeting.status = Meeting.STATUS_ANALYZING
         meeting.save(update_fields=["status"])
 
-        analysis = analyze_transcript(transcript.text, meeting.title)
+        analysis = analyze_transcript(transcript_text, meeting.title)
 
         # Save summary
         MeetingSummary.objects.update_or_create(
@@ -87,7 +87,6 @@ def process_meeting(self, meeting_id):
         meeting.status = Meeting.STATUS_FAILED
         meeting.error_message = str(exc)
         meeting.save(update_fields=["status", "error_message"])
-        raise self.retry(exc=exc)
 
 
 def transcribe_audio(meeting):
@@ -109,7 +108,8 @@ def transcribe_audio(meeting):
                 file=audio_file
             )
 
-        return response
+        # Always return a plain string
+        return response.text if hasattr(response, 'text') else str(response)
 
     except Exception as e:
         logger.warning(f"Whisper transcription failed: {e}. Using mock.")
