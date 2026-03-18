@@ -100,16 +100,21 @@ def transcribe_audio(meeting):
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
 
-        audio_path = meeting.recording_file.path
+        if not meeting.recording_file:
+            logger.warning("No recording file attached.")
+            return _mock_transcript(meeting.title)
 
-        with open(audio_path, "rb") as audio_file:
+        # Use .open() instead of .path so it works on both local
+        # filesystem and cloud storage (S3, Render ephemeral disk, etc.)
+        file_name = meeting.recording_file.name.split("/")[-1]
+        with meeting.recording_file.open("rb") as audio_file:
             response = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=audio_file
+                file=(file_name, audio_file.read()),
             )
 
         # Always return a plain string
-        return response.text if hasattr(response, 'text') else str(response)
+        return response.text if hasattr(response, "text") else str(response)
 
     except Exception as e:
         logger.warning(f"Whisper transcription failed: {e}. Using mock.")
