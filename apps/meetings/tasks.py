@@ -23,16 +23,18 @@ def process_meeting(self, meeting_id):
     try:
         meeting = Meeting.objects.get(id=meeting_id)
     except Meeting.DoesNotExist:
+        print("ELSEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
         logger.error(f"Meeting {meeting_id} not found")
         return
 
     try:
         # Step 1: Transcribe
+        print("TRYRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
         meeting.status = Meeting.STATUS_TRANSCRIBING
         meeting.save(update_fields=["status"])
-
+        print("ENTERRRRRRRRRRRRRRRRRRRRRR")
         transcript_text = transcribe_audio(meeting)
-
+        print("AFTER TRANSCRIBEEEEEEEEEEEEEEEEEEEEE", transcript_text)
         transcript, _ = Transcript.objects.update_or_create(
             meeting=meeting,
             defaults={"text": transcript_text},
@@ -90,28 +92,37 @@ def process_meeting(self, meeting_id):
 
 
 def transcribe_audio(meeting):
+    print("INSIDE TRANSCRIBE AUDIO", meeting.recording_file)
     api_key = settings.OPENAI_API_KEY
-
     if not api_key:
         logger.info("No API key found")
+        print("NO API KEY FOUND")
+        return _mock_transcript(meeting.title)
+
+    if not meeting.recording_file:
+        logger.warning("No recording file attached.")
+        print("NO RECORDING FILE ATTACHED")
         return _mock_transcript(meeting.title)
 
     try:
+        print("TRYING TO TRANSCRIBE AUDIO WITH OPENAI")
+        import httpx
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
 
-        if not meeting.recording_file:
-            logger.warning("No recording file attached.")
-            return _mock_transcript(meeting.title)
+        # Create client without proxies — compatible with openai v1.55+ and v2
+        http_client = httpx.Client()
+        client = OpenAI(api_key=api_key, http_client=http_client)
 
-        # Use .open() instead of .path so it works on both local
-        # filesystem and cloud storage (S3, Render ephemeral disk, etc.)
         file_name = meeting.recording_file.name.split("/")[-1]
         with meeting.recording_file.open("rb") as audio_file:
-            response = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=(file_name, audio_file.read()),
-            )
+            audio_bytes = audio_file.read()
+        print("GOT AUDIO BYTES, SENDING TO OPENAI", len(audio_bytes))
+        response = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=(file_name, audio_bytes),
+        )
+
+        print("RECEIVED RESPONSE", response.text)
 
         # Always return a plain string
         return response.text if hasattr(response, "text") else str(response)
@@ -131,8 +142,11 @@ def analyze_transcript(transcript_text, meeting_title):
         return _mock_analysis(meeting_title)
 
     try:
+        import httpx
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+
+        http_client = httpx.Client()
+        client = OpenAI(api_key=api_key, http_client=http_client)
 
         prompt = f"""Analyze the following meeting transcript and return a JSON object with:
 - "summary": A concise 2-3 sentence summary of the meeting

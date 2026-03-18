@@ -56,10 +56,15 @@ class MeetingListCreateView(generics.ListCreateAPIView):
         # Trigger background processing — gracefully handle missing broker
         try:
             process_meeting.delay(meeting.id)
-        except Exception:
-            # No broker available (e.g. Render free tier without Redis)
-            # Run synchronously so the upload still works
-            process_meeting(meeting.id)
+        except Exception as e:
+            # No broker available — run the underlying function directly
+            # Import the raw function (not the Celery task wrapper)
+            from apps.meetings.tasks import process_meeting as _task
+            try:
+                _task.run(meeting.id)  # call .run() to bypass Celery machinery
+            except AttributeError:
+                # Fallback: call underlying function directly via apply()
+                _task.apply(args=[meeting.id])
         return meeting
 
     def create(self, request, *args, **kwargs):
