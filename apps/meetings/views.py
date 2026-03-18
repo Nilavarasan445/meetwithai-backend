@@ -53,8 +53,13 @@ class MeetingListCreateView(generics.ListCreateAPIView):
             if first_facility:
                 data['facility'] = first_facility
         meeting = serializer.save(user=user, status=Meeting.STATUS_PENDING)
-        # Trigger background processing
-        process_meeting.delay(meeting.id)
+        # Trigger background processing — gracefully handle missing broker
+        try:
+            process_meeting.delay(meeting.id)
+        except Exception:
+            # No broker available (e.g. Render free tier without Redis)
+            # Run synchronously so the upload still works
+            process_meeting(meeting.id)
         return meeting
 
     def create(self, request, *args, **kwargs):
@@ -111,7 +116,10 @@ def analyze_meeting(request, pk):
 
     meeting.status = Meeting.STATUS_PENDING
     meeting.save(update_fields=["status"])
-    process_meeting.delay(meeting.id)
+    try:
+        process_meeting.delay(meeting.id)
+    except Exception:
+        process_meeting(meeting.id)
 
     return Response({"detail": "Analysis queued.", "meeting_id": meeting.id})
 
