@@ -4,12 +4,13 @@ import requests
 import tempfile
 from urllib.parse import urlencode
 from datetime import timedelta
+from django.shortcuts import redirect
 
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from .models import OAuthToken
@@ -96,11 +97,12 @@ def google_auth_url(request):
     return Response({"url": url})
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def google_callback(request):
     """Exchange auth code for tokens and save them."""
-    code = request.data.get("code")
+    code = request.GET.get("code")
+
     if not code:
         return Response({"detail": "Missing code."}, status=400)
 

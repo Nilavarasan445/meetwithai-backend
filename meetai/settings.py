@@ -119,15 +119,27 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 # Celery
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+# Strip whitespace to guard against accidental empty env vars on Render/Fly
+_broker_url = os.environ.get("CELERY_BROKER_URL", "").strip()
+_result_url = os.environ.get("CELERY_RESULT_BACKEND", "").strip()
+
+CELERY_BROKER_URL = _broker_url or "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = _result_url or "redis://localhost:6379/0"
+
+# If no broker is configured on Render (no Redis add-on), run tasks synchronously
+# so uploads still work — they just process inline instead of in background.
+if not _broker_url:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+else:
+    CELERY_TASK_ALWAYS_EAGER = False
+    CELERY_TASK_EAGER_PROPAGATES = False
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
-CELERY_TASK_ALWAYS_EAGER = False          # Never run tasks inline — always go through Redis
-CELERY_TASK_EAGER_PROPAGATES = False
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True  # Suppress deprecation warning in Celery 6
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Internationalization
 LANGUAGE_CODE = "en-us"
